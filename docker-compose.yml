@@ -1,0 +1,67 @@
+version: "3.8"
+
+services:
+  clickhouse:
+    image: yandex/clickhouse-server
+    container_name: stemly_olap
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "8123:8123"
+    volumes:
+      - clickhouse:/var/lib/clickhouse
+      - ./users.xml:/etc/clickhouse-server/users.xml
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+
+  redis:
+    image: redis
+    container_name: stemly_cache
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6300:6379"
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+
+  postgres:
+    image: postgres:15
+    container_name: stemly_db
+    restart: unless-stopped
+    ports:
+      - "5400:5432"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+    env_file: .env
+
+  postgres_test:
+    image: postgres:15
+    container_name: stemly_test_db
+    ports:
+      - "5450:5432"
+    profiles:
+      - "test"
+    environment:
+      POSTGRES_DB: stemly_test
+      POSTGRES_USER: stemly
+      POSTGRES_PASSWORD: stemly
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: stemly_blob
+    restart: unless-stopped
+    ports:
+      - "10000:10000"
+    volumes:
+      - ../azurite:/data
+
+volumes:
+  clickhouse:
+  postgres:
